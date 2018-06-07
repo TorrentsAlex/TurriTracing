@@ -20,8 +20,10 @@ public:
     vec3 vertical;
     vec3 u, v, w;
     float lens_radius;
-
-    camera(vec3 lookFrom, vec3 lookAt, vec3 vup, float vFov, float aspect, float aperture, float focus_dist) {
+    float _t0, _t1;
+    camera(vec3 lookFrom, vec3 lookAt, vec3 vup, float vFov, float aspect, float aperture, float focus_dist, float time0, float time1) {
+        _t0 = time0;
+        _t1 = time1;
         lens_radius = aperture / 2.0f;
         float theta = vFov * 3.1416f /180;
         float half_height = tan(theta/2);
@@ -40,7 +42,8 @@ public:
     ray get_ray(float u, float v) {
         vec3 rd = lens_radius * random_in_unit_disk();
         vec3 offset = u * rd.x() + v * rd.y();
-        return ray(origin + offset, lowerLeftCorner + u*horizontal + v*vertical-origin-offset);
+        float time = _t0 + frandom() * (_t1 - _t0); 
+        return ray(origin + offset, lowerLeftCorner + u*horizontal + v*vertical-origin-offset, time);
     }
 };
 

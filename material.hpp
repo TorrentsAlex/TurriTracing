@@ -5,10 +5,11 @@ struct hit_record;
 
 #include "ray.hpp"
 #include "hitable.hpp"
+#include "texture.hpp"
 
 /** return: float between [0.0, 1.0]*/
 float frandom() {
-    return float(rand() % 9 /10.0f);
+    return glm::linearRand(0.0f, 1.0f);
 }
 
 inline vec3 random_in_unit_sphere() {
@@ -44,18 +45,18 @@ bool refract(const vec3& v, const vec3& n, float n_over_nt, vec3& refracted) {
 class material {
 public:
 	virtual bool scatter(const ray& r_in, const hit_record rec, vec3& attenuation, ray& scattered) const = 0;
-
+	virtual vec3 emitted(float u, float v, const vec3& p) const { return vec3(0.0f);}
 };
 
 class lambertian : public material {
 public:
-	vec3 albedo;
+	texture* albedo;
 
-	lambertian(const vec3& a) : albedo(a) {}
+	lambertian(texture* a) : albedo(a) {}
 	virtual bool scatter(const ray& r_in, const hit_record rec, vec3& attenuation, ray& scattered) const {
 		vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-		scattered = ray(rec.p, target - rec.p);
-		attenuation = albedo;
+		scattered = ray(rec.p, target - rec.p, r_in.time());
+		attenuation = albedo->value(rec.u, rec.v, rec.p);
 		return true;
 	}
 
@@ -72,6 +73,40 @@ public:
 		scattered = ray(rec.p, reflected- fuzz * random_in_unit_sphere());
 		attenuation = albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
+	}
+};
+
+class PBR : public material {
+public:
+	texture* rough;
+	texture* metal;
+	texture* alb;
+	float fuzz;
+	PBR(texture* r, texture* m, texture* a): rough(r), metal(m), alb(a) {}
+	virtual bool scatter(const ray& r_in, const hit_record rec, vec3& attenuation, ray& scattered) const {
+		vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal) * metal->value(rec.u, rec.v, rec.p).r();
+		scattered = ray(rec.p, reflected- fuzz * random_in_unit_sphere());
+		attenuation = alb->value(rec.u, rec.v, rec.p);
+		return dot(scattered.direction(), rec.normal) > 0;
+	}
+};
+
+class checker_material : public material {
+	public:
+	metal* met;
+	lambertian* lam;
+	checker_material(texture* diff, vec3 metallic, float fuzz) {
+		met = new metal(metallic, fuzz); 
+		lam = new lambertian(diff);
+		//lam1 = new lambertian(new constant_texture(vec3(0.5f, 0.0f, 0.0f)));
+	}
+	virtual bool scatter(const ray& r_in, const hit_record rec, vec3& attenuation, ray& scattered) const {
+	   float sines = sin(4.0*rec.p.x())*sin(4.0*rec.p.y())*sin(4.0*rec.p.z());
+        if (sines < 0) {
+            return met->scatter(r_in, rec, attenuation, scattered);
+        } else {
+            return lam->scatter(r_in, rec, attenuation, scattered);
+        }
 	}
 };
 
@@ -113,4 +148,18 @@ public:
 		return true;
 	}
 };
+
+class diffuse_light : public material {
+	public:
+	texture *emit;
+	diffuse_light() {}
+	diffuse_light(texture *a) : emit(a) {}
+	virtual bool scatter(const ray& r_in, const hit_record rec, vec3& attenuation, ray& scattered) const {
+		return false;
+	}
+
+	virtual vec3 emitted(float u, float v, const vec3& p) const { return emit->value(u, v, p); }
+
+};
+
 #endif

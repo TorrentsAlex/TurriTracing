@@ -53,6 +53,10 @@ class vec3 {
         a[0] *= k; a[1] *= k; a[2] *= k;
         return *this;        
     }
+    
+    inline bool operator==(const vec3& a) {
+        return (a[0] == a.x() && a[1] == a.y() && a[2] == a.z());
+    }
 
     inline float length() const {
         return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);}
