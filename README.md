@@ -6,7 +6,12 @@ ray tracing based on Peter Shirley book's
 - ray tracing the next weekend
 - multi-threading 
 
+##### Materials 
+
+![](materials.png)
+
 
 ##### Cornell box 
+
 ![](results/cornell_box_sphere.png)
 
